@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFB Wheel Configurator</title>
+<style>
+  :root {
+    --bg: #0f0f1a; --card: #1a1a2e; --border: #2a2a45;
+    --accent: #e74c3c; --accent2: #c0392b; --text: #eee;
+    --muted: #888; --green: #2ecc71; --blue: #3498db;
+    --yellow: #f39c12;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+  
+  /* Header */
+  .header { background: var(--card); border-bottom: 2px solid var(--accent); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 20px; color: var(--accent); letter-spacing: 1px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #555; transition: background .3s; }
+  .status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  #status-text { font-size: 13px; color: var(--muted); }
+  
+  /* Connect button */
+  .btn { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #333; }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-green:hover { background: #27ae60; }
+  .btn-small { padding: 5px 12px; font-size: 12px; }
+  
+  /* Tabs */
+  .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); padding: 0 24px; overflow-x: auto; }
+  .tab { padding: 14px 20px; cursor: pointer; font-size: 13px; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: all .2s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  
+  /* Main content */
+  .content { padding: 24px; max-width: 900px; margin: 0 auto; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+  
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 18px; }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 16px; text-transform: uppercase; letter-spacing: .5px; }
+  
+  /* Sliders */
+  .slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .slider-label { width: 130px; font-size: 13px; color: var(--muted); flex-shrink: 0; }
+  .slider-wrap { flex: 1; position: relative; }
+  input[type=range] { width: 100%; -webkit-appearance: none; height: 6px; border-radius: 3px; background: var(--border); outline: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 6px rgba(231,76,60,.5); }
+  .slider-value { width: 52px; text-align: right; font-size: 14px; font-weight: 700; color: var(--text); flex-shrink: 0; }
+  
+  /* Grid */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  
+  /* Number input */
+  .input-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .input-row label { width: 130px; font-size: 13px; color: var(--muted); flex-shrink: 0; }
+  .input-row input[type=number], .input-row input[type=text] {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; color: var(--text); font-size: 14px; max-width: 120px;
+  }
+  .input-row input:focus { outline: none; border-color: var(--accent); }
+  .input-row .unit { color: var(--muted); font-size: 12px; }
+  
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .toggle-row label { width: 130px; font-size: 13px; color: var(--muted); }
+  .toggle { position: relative; width: 46px; height: 24px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 24px; cursor: pointer; transition: .3s; }
+  .toggle-slider:before { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; left: 3px; top: 3px; transition: .3s; }
+  .toggle input:checked + .toggle-slider { background: var(--accent); }
+  .toggle input:checked + .toggle-slider:before { transform: translateX(22px); }
+  
+  /* Live gauges */
+  .gauge-wrap { text-align: center; }
+  .gauge-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .gauge-bar { height: 12px; background: var(--border); border-radius: 6px; overflow: hidden; position: relative; }
+  .gauge-fill { height: 100%; border-radius: 6px; transition: width .1s, background .1s; }
+  .gauge-center { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: var(--border); transform: translateX(-50%); }
+  .gauge-value { font-size: 16px; font-weight: 700; margin-top: 4px; }
+  
+  /* Steering arc visual */
+  #steering-canvas { display: block; margin: 0 auto; }
+  
+  /* Axis bars for live monitor */
+  .axis-bar-wrap { margin-bottom: 10px; }
+  .axis-bar-label { font-size: 12px; color: var(--muted); margin-bottom: 3px; display: flex; justify-content: space-between; }
+  .axis-bar { height: 16px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .axis-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width .08s; }
+  .axis-fill.steer { background: var(--accent); }
+  
+  /* Gear display */
+  .gear-box { display: inline-block; padding: 12px 20px; border-radius: 8px; background: var(--bg); border: 2px solid var(--border); font-size: 32px; font-weight: 900; min-width: 60px; text-align: center; }
+  .gear-box.active { border-color: var(--green); color: var(--green); }
+  .gear-box.reverse { border-color: #8e44ad; color: #8e44ad; }
+  
+  /* Shifter grid */
+  .shift-grid { display: grid; grid-template-columns: repeat(3, 80px); grid-template-rows: repeat(3, 60px); gap: 6px; margin: 0 auto; width: fit-content; }
+  .shift-cell { background: var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; color: var(--muted); border: 2px solid transparent; }
+  .shift-cell.active { background: var(--accent); color: #fff; border-color: var(--accent2); }
+  .shift-cell.reverse { background: #8e44ad; color: #fff; border-color: #6c3483; }
+  .shift-cell.neutral { font-size: 14px; color: var(--muted); background: var(--bg); }
+  .shift-dot-wrap { position: relative; width: 246px; height: 186px; background: var(--bg); border-radius: 10px; border: 1px solid var(--border); margin: 12px auto; }
+  .shift-dot { position: absolute; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 8px var(--accent); transition: left .05s, top .05s; }
+  
+  /* Cal buttons */
+  .cal-btn { padding: 6px 14px; font-size: 12px; background: var(--blue); color: #fff; border: none; border-radius: 5px; cursor: pointer; transition: background .2s; }
+  .cal-btn:hover { background: #2980b9; }
+  .cal-btn.green { background: var(--green); }
+  
+  /* Save bar */
+  .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); padding: 12px 24px; display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
+  .toast { position: fixed; top: 70px; right: 24px; background: var(--green); color: #000; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; }
+
+  /* Curve selector */
+  .curve-sel { display: flex; gap: 8px; }
+  .curve-opt { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--muted); cursor: pointer; font-size: 12px; }
+  .curve-opt.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+
+  /* Info box */
+  .info-box { background: rgba(52,152,219,.1); border: 1px solid var(--blue); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #aac; margin-bottom: 16px; line-height: 1.6; }
+
+  @media(max-width:600px){ .grid2,.grid3{grid-template-columns:1fr;} .slider-label{width:100px;} }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>🏎 FFB WHEEL CONFIGURATOR</h1>
+  <div class="header-right">
+    <div class="status-dot" id="dot"></div>
+    <span id="status-text">Disconnected</span>
+    <button class="btn btn-primary" id="connect-btn" onclick="toggleConnect()">Connect</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('live')">📊 Live Monitor</div>
+  <div class="tab" onclick="showTab('wheel')">⚙️ Wheel Setup</div>
+  <div class="tab" onclick="showTab('ffb')">🎮 FFB Tuning</div>
+  <div class="tab" onclick="showTab('pedals')">🦶 Pedals</div>
+  <div class="tab" onclick="showTab('shifter')">🕹️ Shifter</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content" style="padding-bottom:70px">
+
+  <!-- ── LIVE MONITOR ─────────────────────────────────────────────────── -->
+  <div class="tab-pane active" id="tab-live">
+    <div class="info-box" id="no-conn-msg">
+      ⚡ Connect to your STM32 FFB Wheel via the button above to see live data and configure your wheel.
+      Make sure the wheel is plugged in via USB first.
+    </div>
+
+    <canvas id="steering-canvas" width="320" height="160" style="margin-bottom:18px"></canvas>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Steering</div>
+        <div class="axis-bar-wrap">
+          <div class="axis-bar-label"><span>Position</span><span id="steer-val-txt">0°</span></div>
+          <div class="axis-bar"><div class="axis-fill steer" id="steer-bar" style="width:50%;margin-left:0"></div></div>
+        </div>
+        <div class="axis-bar-wrap" style="margin-top:10px">
+          <div class="axis-bar-label"><span>Raw ADC</span><span id="steer-raw-txt">2047</span></div>
+          <div class="axis-bar"><div class="axis-fill" id="steer-raw-bar" style="width:50%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Gear</div>
+        <div style="text-align:center;padding:10px">
+          <div class="gear-box" id="gear-disp">N</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pedals</div>
+      <div class="grid3">
+        <div>
+          <div class="axis-bar-wrap">
+            <div class="axis-bar-label"><span>Throttle</span><span id="thr-pct">0%</span></div>
+            <div class="axis-bar"><div class="axis-fill" id="thr-bar" style="width:0%;background:#2ecc71"></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="axis-bar-wrap">
+            <div class="axis-bar-label"><span>Brake</span><span id="brake-pct">0%</span></div>
+            <div class="axis-bar"><div class="axis-fill" id="brake-bar" style="width:0%;background:#e74c3c"></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="axis-bar-wrap">
+            <div class="axis-bar-label"><span>Clutch</span><span id="clutch-pct">0%</span></div>
+            <div class="axis-bar"><div class="axis-fill" id="clutch-bar" style="width:0%;background:#f39c12"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">FFB Status</div>
+      <div style="font-size:13px;color:var(--muted)">
+        FFB Enabled: <strong id="ffb-en-txt" style="color:var(--green)">—</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WHEEL SETUP ──────────────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-wheel">
+    <div class="card">
+      <div class="card-title">Wheel Parameters</div>
+      <div class="input-row">
+        <label>Rotation Range</label>
+        <input type="number" id="i-range" min="180" max="1800" value="900">
+        <span class="unit">degrees</span>
+      </div>
+      <div class="input-row">
+        <label>Pulley Ratio</label>
+        <input type="number" id="i-ratio" min="1" max="20" step="0.1" value="4.5">
+        <span class="unit">wheel/pot</span>
+      </div>
+      <div class="input-row">
+        <label>Pot Sweep</label>
+        <input type="number" id="i-potdeg" min="90" max="360" step="1" value="200">
+        <span class="unit">degrees</span>
+      </div>
+      <div class="toggle-row">
+        <label>Invert Steering</label>
+        <label class="toggle"><input type="checkbox" id="i-invert" onchange="sendSet('invert', this.checked?1:0)"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="input-row">
+        <label>Center Deadzone</label>
+        <input type="number" id="i-deadzone" min="0" max="20" value="3">
+        <span class="unit">degrees</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Steering Calibration</div>
+      <div class="info-box">
+        1. Turn wheel to full LEFT lock → click "Set Left Lock"<br>
+        2. Return wheel to CENTER → click "Set Center"<br>
+        3. Turn wheel to full RIGHT lock → click "Set Right Lock"
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="cal-btn" onclick="sendCmd('CALIBRATE_MIN')">⟵ Set Left Lock</button>
+        <button class="cal-btn green" onclick="sendCmd('CALIBRATE_CENTER')">◎ Set Center</button>
+        <button class="cal-btn" onclick="sendCmd('CALIBRATE_MAX')">Set Right Lock ⟶</button>
+      </div>
+      <div style="margin-top:14px;font-size:12px;color:var(--muted)">
+        Steer Min: <strong id="cal-min">—</strong> &nbsp;|&nbsp;
+        Center: <strong id="cal-center">—</strong> &nbsp;|&nbsp;
+        Max: <strong id="cal-max">—</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FFB TUNING ───────────────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-ffb">
+    <div class="card">
+      <div class="card-title">FFB Effect Gains</div>
+      <div class="info-box">Changes apply instantly while driving. Click Save when happy.</div>
+      <div class="slider-row">
+        <span class="slider-label">Overall Strength</span>
+        <div class="slider-wrap"><input type="range" id="s-strength" min="0" max="100" value="80" oninput="sliderUpdate(this,'strength','%')"></div>
+        <span class="slider-value" id="sv-strength">80%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Spring</span>
+        <div class="slider-wrap"><input type="range" id="s-spring" min="0" max="100" value="65" oninput="sliderUpdate(this,'spring','%')"></div>
+        <span class="slider-value" id="sv-spring">65%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Damper</span>
+        <div class="slider-wrap"><input type="range" id="s-damper" min="0" max="100" value="40" oninput="sliderUpdate(this,'damper','%')"></div>
+        <span class="slider-value" id="sv-damper">40%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Friction</span>
+        <div class="slider-wrap"><input type="range" id="s-friction" min="0" max="100" value="25" oninput="sliderUpdate(this,'friction','%')"></div>
+        <span class="slider-value" id="sv-friction">25%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Inertia</span>
+        <div class="slider-wrap"><input type="range" id="s-inertia" min="0" max="100" value="20" oninput="sliderUpdate(this,'inertia','%')"></div>
+        <span class="slider-value" id="sv-inertia">20%</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Safety</div>
+      <div class="slider-row">
+        <span class="slider-label">Max Torque Limit</span>
+        <div class="slider-wrap"><input type="range" id="s-maxtorque" min="10" max="100" value="90" oninput="sliderUpdate(this,'max_torque','%')"></div>
+        <span class="slider-value" id="sv-maxtorque">90%</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">
+        ⚠ Keep this below 80% until you have tested the wheel with hands-on. The 775 motor is powerful.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PEDALS ────────────────────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-pedals">
+    <div class="info-box">
+      Press each pedal to its minimum and maximum position, then click the calibration buttons.
+    </div>
+    <div class="grid3">
+      <!-- Throttle -->
+      <div class="card">
+        <div class="card-title" style="color:var(--green)">Throttle</div>
+        <div style="margin-bottom:12px">
+          <div class="axis-bar-label"><span>Live</span><span id="p-thr-raw">0</span></div>
+          <div class="axis-bar"><div class="axis-fill" id="p-thr-bar" style="width:0%;background:var(--green)"></div></div>
+        </div>
+        <button class="cal-btn" style="margin-bottom:6px;width:100%" onclick="sendCmd('CAL_THR_MIN')">Set Released</button>
+        <button class="cal-btn" style="width:100%" onclick="sendCmd('CAL_THR_MAX')">Set Full Press</button>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+          Min:<span id="p-thr-min">—</span> Max:<span id="p-thr-max">—</span>
+        </div>
+        <div style="margin-top:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Curve</div>
+          <div class="curve-sel">
+            <div class="curve-opt active" onclick="setCurve('thr_curve',0,this)">Linear</div>
+            <div class="curve-opt" onclick="setCurve('thr_curve',1,this)">Square</div>
+          </div>
+        </div>
+      </div>
+      <!-- Brake -->
+      <div class="card">
+        <div class="card-title" style="color:var(--accent)">Brake</div>
+        <div style="margin-bottom:12px">
+          <div class="axis-bar-label"><span>Live</span><span id="p-brake-raw">0</span></div>
+          <div class="axis-bar"><div class="axis-fill" id="p-brake-bar" style="width:0%;background:var(--accent)"></div></div>
+        </div>
+        <button class="cal-btn" style="margin-bottom:6px;width:100%" onclick="sendCmd('CAL_BRAKE_MIN')">Set Released</button>
+        <button class="cal-btn" style="width:100%" onclick="sendCmd('CAL_BRAKE_MAX')">Set Full Press</button>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+          Min:<span id="p-brake-min">—</span> Max:<span id="p-brake-max">—</span>
+        </div>
+        <div style="margin-top:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Curve</div>
+          <div class="curve-sel">
+            <div class="curve-opt" onclick="setCurve('brake_curve',0,this)">Linear</div>
+            <div class="curve-opt active" onclick="setCurve('brake_curve',1,this)">Square</div>
+          </div>
+        </div>
+      </div>
+      <!-- Clutch -->
+      <div class="card">
+        <div class="card-title" style="color:var(--yellow)">Clutch</div>
+        <div style="margin-bottom:12px">
+          <div class="axis-bar-label"><span>Live</span><span id="p-clutch-raw">0</span></div>
+          <div class="axis-bar"><div class="axis-fill" id="p-clutch-bar" style="width:0%;background:var(--yellow)"></div></div>
+        </div>
+        <button class="cal-btn" style="margin-bottom:6px;width:100%" onclick="sendCmd('CAL_CLUTCH_MIN')">Set Released</button>
+        <button class="cal-btn" style="width:100%" onclick="sendCmd('CAL_CLUTCH_MAX')">Set Full Press</button>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+          Min:<span id="p-clutch-min">—</span> Max:<span id="p-clutch-max">—</span>
+        </div>
+        <div style="margin-top:10px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Curve</div>
+          <div class="curve-sel">
+            <div class="curve-opt active" onclick="setCurve('clutch_curve',0,this)">Linear</div>
+            <div class="curve-opt" onclick="setCurve('clutch_curve',1,this)">Square</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SHIFTER ───────────────────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-shifter">
+    <div class="info-box">
+      Move the shifter to each gate position and click the matching button.
+      The dot shows the current shifter position live.<br><br>
+      🔴 <strong>Reverse:</strong> Wire a microswitch between <strong>PB8</strong> and <strong>GND</strong> under your shifter knob.
+      Push knob <strong>down</strong> while moving to 1st gear position = Reverse.
+      No push = 1st gear as normal.
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Live Shifter Position</div>
+        <div class="shift-dot-wrap">
+          <div class="shift-dot" id="shift-dot" style="left:50%;top:50%"></div>
+          <!-- Gate lines -->
+          <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+            <line x1="82" y1="0" x2="82" y2="186" stroke="#2a2a45" stroke-width="1.5"/>
+            <line x1="164" y1="0" x2="164" y2="186" stroke="#2a2a45" stroke-width="1.5"/>
+            <line x1="0" y1="62" x2="246" y2="62" stroke="#2a2a45" stroke-width="1.5"/>
+            <line x1="0" y1="124" x2="246" y2="124" stroke="#2a2a45" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <div style="text-align:center;margin-top:8px">
+          Detected Gear: <strong id="shift-gear-live" style="color:var(--accent);font-size:18px">N</strong>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Zone Calibration</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
+          Move shifter to that gate, then click the button:
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="cal-btn" onclick="sendCmd('CAL_SHFT_LEFT')">◀ Set Left Gate (X)</button>
+          <button class="cal-btn" onclick="sendCmd('CAL_SHFT_RIGHT')">Set Right Gate (X) ▶</button>
+          <button class="cal-btn" onclick="sendCmd('CAL_SHFT_FWD')">▲ Set Forward (Y)</button>
+          <button class="cal-btn" onclick="sendCmd('CAL_SHFT_REV')">▼ Set Reverse (Y)</button>
+        </div>
+        <div style="margin-top:14px;font-size:11px;color:var(--muted)">
+          X Left:<span id="sx-l">—</span> Right:<span id="sx-r">—</span><br>
+          Y Fwd:<span id="sy-f">—</span> Rev:<span id="sy-r">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Gear Map Visual</div>
+      <div class="shift-grid" style="margin:8px auto">
+        <div class="shift-cell" id="gc1" title="1st gear / Reverse (hold knob down)">1/R</div>
+        <div class="shift-cell" id="gc3">3</div>
+        <div class="shift-cell" id="gc5">5</div>
+        <div class="shift-cell neutral" id="gcN">·</div>
+        <div class="shift-cell neutral">·</div>
+        <div class="shift-cell neutral">·</div>
+        <div class="shift-cell" id="gc2">2</div>
+        <div class="shift-cell" id="gc4">4</div>
+        <div class="shift-cell" id="gc6">6</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">
+        🟣 Purple = Reverse active (PB8 held) &nbsp;|&nbsp; 🔴 Red = 1st gear
+      </div>
+    </div>
+  </div>
+
+</div><!-- end content -->
+
+<!-- SAVE BAR -->
+<div class="save-bar">
+  <button class="btn btn-secondary" onclick="sendCmd('RESET');showToast('Defaults restored')">Reset Defaults</button>
+  <button class="btn btn-green" onclick="applyAll();sendCmd('SAVE');showToast('Saved to flash ✓')">💾 Save to Flash</button>
+</div>
+
+<div class="toast" id="toast">Saved ✓</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   SERIAL CONNECTION (Web Serial API — Chrome only)
+   ══════════════════════════════════════════════════════════════════════════ */
+let port = null, reader = null, writer = null;
+let connected = false;
+let rxBuf = '';
+
+async function toggleConnect() {
+  if (connected) { await disconnect(); return; }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    writer = port.writable.getWriter();
+    connected = true;
+    setConnected(true);
+    readLoop();
+    await send('GET_CONFIG\n');
+  } catch(e) {
+    alert('Could not connect: ' + e.message +
+          '\n\nMake sure Chrome is being used and the wheel is plugged in.');
+  }
+}
+
+async function disconnect() {
+  connected = false;
+  setConnected(false);
+  try { if(reader) { await reader.cancel(); reader = null; } } catch(e){}
+  try { if(writer) { await writer.close(); writer = null; } } catch(e){}
+  try { if(port)  { await port.close();  port = null;  } } catch(e){}
+}
+
+async function readLoop() {
+  reader = port.readable.getReader();
+  const dec = new TextDecoder();
+  try {
+    while (connected) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      rxBuf += dec.decode(value);
+      let nl;
+      while ((nl = rxBuf.indexOf('\n')) !== -1) {
+        const line = rxBuf.slice(0, nl).trim();
+        rxBuf = rxBuf.slice(nl + 1);
+        if (line) handleMsg(line);
+      }
+    }
+  } catch(e) { if(connected) console.warn('Read error', e); }
+}
+
+async function send(str) {
+  if (!writer) return;
+  const enc = new TextEncoder();
+  await writer.write(enc.encode(str));
+}
+
+function sendCmd(cmd) { send(cmd + '\n'); }
+function sendSet(key, val) { send('SET ' + key + ' ' + val + '\n'); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MESSAGE HANDLER
+   ══════════════════════════════════════════════════════════════════════════ */
+function handleMsg(line) {
+  let obj;
+  try { obj = JSON.parse(line); } catch(e) { return; }
+
+  if (obj.type === 'config') {
+    loadConfig(obj);
+  } else if (obj.type === 'live') {
+    updateLive(obj);
+  }
+}
+
+function loadConfig(c) {
+  setVal('i-range',    c.range);
+  setVal('i-ratio',    c.ratio);
+  setVal('i-potdeg',   c.pot_deg);
+  setCheck('i-invert', c.invert);
+  setVal('i-deadzone', c.deadzone);
+
+  setSlider('s-strength',  c.strength, 'strength', '%');
+  setSlider('s-spring',    c.spring,   'spring',   '%');
+  setSlider('s-damper',    c.damper,   'damper',   '%');
+  setSlider('s-friction',  c.friction, 'friction', '%');
+  setSlider('s-inertia',   c.inertia,  'inertia',  '%');
+  setSlider('s-maxtorque', c.max_torque,'max_torque','%');
+
+  setText('cal-min',    c.steer_min);
+  setText('cal-center', c.steer_center);
+  setText('cal-max',    c.steer_max);
+
+  setText('p-thr-min',    c.thr_min);   setText('p-thr-max',    c.thr_max);
+  setText('p-brake-min',  c.brake_min); setText('p-brake-max',  c.brake_max);
+  setText('p-clutch-min', c.clutch_min);setText('p-clutch-max', c.clutch_max);
+
+  setText('sx-l', c.sx_left);  setText('sx-r', c.sx_right);
+  setText('sy-f', c.sy_fwd);   setText('sy-r', c.sy_rev);
+}
+
+function updateLive(d) {
+  /* Steering arc */
+  drawSteering(d.angle);
+  setText('steer-val-txt', d.angle.toFixed(1) + '°');
+  const rawPct = (d.steer_raw / 4095 * 100).toFixed(0);
+  setText('steer-raw-txt', d.steer_raw);
+  setBarPct('steer-raw-bar', rawPct);
+
+  /* Steering bar (centered) */
+  const range = parseInt(document.getElementById('i-range')?.value||900);
+  const steerPct = 50 + (d.angle / (range/2)) * 50;
+  setBarPct('steer-bar', Math.max(0, Math.min(100, steerPct)));
+
+  /* Pedals */
+  const thrPct  = pct(d.thr,    0, 4095);
+  const brakePct= pct(d.brake,  0, 4095);
+  const clutchPct=pct(d.clutch, 0, 4095);
+  setBarPct('thr-bar',    thrPct);  setText('thr-pct',    thrPct + '%');
+  setBarPct('brake-bar',  brakePct);setText('brake-pct',  brakePct + '%');
+  setBarPct('clutch-bar', clutchPct);setText('clutch-pct',clutchPct + '%');
+  setBarPct('p-thr-bar',  thrPct);  setText('p-thr-raw',   d.thr);
+  setBarPct('p-brake-bar',brakePct);setText('p-brake-raw', d.brake);
+  setBarPct('p-clutch-bar',clutchPct);setText('p-clutch-raw',d.clutch);
+
+  /* Gear */
+  const gnames = ['N','1','2','3','4','5','6','R'];
+  const gname  = gnames[d.gear] || 'N';
+  const gearEl = document.getElementById('gear-disp');
+  gearEl.textContent = gname;
+  /* N=grey, 1-6=green, R=purple */
+  if (d.gear === 0)      gearEl.className = 'gear-box';
+  else if (d.gear === 7) gearEl.className = 'gear-box reverse';
+  else                   gearEl.className = 'gear-box active';
+  setText('shift-gear-live', gname);
+
+  /* Shifter dot */
+  const sx = pct(d.shft_x, 0, 4095);
+  const sy = pct(d.shft_y, 0, 4095);
+  const dot = document.getElementById('shift-dot');
+  dot.style.left = sx + '%';
+  dot.style.top  = (100-sy) + '%';
+
+  /* Gear cells highlight:
+     GEAR_R (7) uses same physical position as GEAR_1
+     but shown in purple to indicate reverse is active  */
+  ['gc1','gc2','gc3','gc4','gc5','gc6','gcN'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('active'); el.classList.remove('reverse'); }
+  });
+  const gmap = ['gcN','gc1','gc2','gc3','gc4','gc5','gc6','gc1']; /* index 7=R→gc1 */
+  if (d.gear === 7) {
+    /* Reverse — highlight gc1 in purple */
+    document.getElementById('gc1')?.classList.add('reverse');
+  } else if (gmap[d.gear]) {
+    document.getElementById(gmap[d.gear])?.classList.add('active');
+  }
+
+  /* FFB status */
+  const ffbEl = document.getElementById('ffb-en-txt');
+  ffbEl.textContent = d.ffb_en ? 'Enabled ✓' : 'Disabled';
+  ffbEl.style.color = d.ffb_en ? 'var(--green)' : 'var(--accent)';
+
+  document.getElementById('no-conn-msg').style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   STEERING ARC CANVAS
+   ══════════════════════════════════════════════════════════════════════════ */
+function drawSteering(angle) {
+  const canvas = document.getElementById('steering-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H - 20;
+  const r = 110;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const range = parseInt(document.getElementById('i-range')?.value || 900);
+
+  /* Background arc */
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, Math.PI, 0, false);
+  ctx.strokeStyle = '#2a2a45';
+  ctx.lineWidth = 14;
+  ctx.stroke();
+
+  /* Progress arc */
+  const norm = angle / (range / 2); /* -1 to +1 */
+  const startA = Math.PI;
+  const endA   = Math.PI + norm * Math.PI;
+  const ccw    = norm < 0;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startA, endA, ccw);
+  ctx.strokeStyle = norm >= 0 ? '#e74c3c' : '#3498db';
+  ctx.lineWidth = 14;
+  ctx.stroke();
+
+  /* Center tick */
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r + 7);
+  ctx.lineTo(cx, cy - r - 7);
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  /* Needle */
+  const needleA = Math.PI + norm * Math.PI;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + (r-6)*Math.cos(needleA), cy + (r-6)*Math.sin(needleA));
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  /* Center circle */
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8, 0, 2*Math.PI);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+
+  /* Angle text */
+  ctx.fillStyle = '#eee';
+  ctx.font = 'bold 22px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText(angle.toFixed(1) + '°', cx, cy - r/2);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   UI HELPERS
+   ══════════════════════════════════════════════════════════════════════════ */
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const tabs = ['live','wheel','ffb','pedals','shifter'];
+  const idx  = tabs.indexOf(id);
+  document.querySelectorAll('.tab')[idx]?.classList.add('active');
+}
+
+function setConnected(v) {
+  connected = v;
+  document.getElementById('dot').className = 'status-dot' + (v?' connected':'');
+  document.getElementById('status-text').textContent = v ? 'Connected' : 'Disconnected';
+  document.getElementById('connect-btn').textContent  = v ? 'Disconnect' : 'Connect';
+  document.getElementById('connect-btn').className    = 'btn ' + (v?'btn-secondary':'btn-primary');
+  if (!v) drawSteering(0);
+}
+
+function sliderUpdate(el, key, unit) {
+  const id  = el.id.replace('s-','sv-');
+  document.getElementById(id).textContent = el.value + unit;
+  sendSet(key, el.value);
+}
+
+function setSlider(id, val, key, unit) {
+  const el = document.getElementById(id);
+  if (el) { el.value = val; sliderUpdate(el, key, unit); }
+}
+
+function setVal(id, v)   { const e=document.getElementById(id); if(e) e.value=v; }
+function setCheck(id,v)  { const e=document.getElementById(id); if(e) e.checked=!!v; }
+function setText(id, v)  { const e=document.getElementById(id); if(e) e.textContent=v; }
+function setBarPct(id,p) { const e=document.getElementById(id); if(e) e.style.width=p+'%'; }
+function pct(v,mn,mx)    { return Math.round(Math.max(0,Math.min(100,(v-mn)/(mx-mn)*100))); }
+
+function setCurve(key, val, el) {
+  el.closest('.curve-sel').querySelectorAll('.curve-opt')
+    .forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  sendSet(key, val);
+}
+
+function applyAll() {
+  sendSet('range',    document.getElementById('i-range').value);
+  sendSet('ratio',    document.getElementById('i-ratio').value);
+  sendSet('pot_deg',  document.getElementById('i-potdeg').value);
+  sendSet('invert',   document.getElementById('i-invert').checked?1:0);
+  sendSet('deadzone', document.getElementById('i-deadzone').value);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* Check if Web Serial is supported */
+if (!navigator.serial) {
+  document.getElementById('connect-btn').textContent = 'Chrome Required';
+  document.getElementById('connect-btn').disabled = true;
+  document.getElementById('no-conn-msg').innerHTML =
+    '⚠️ Web Serial API requires Google Chrome (version 89+). Please open this file in Chrome.';
+}
+
+/* Draw empty steering arc on load */
+drawSteering(0);
+</script>
+</body>
+</html>
