@@ -58,7 +58,7 @@ PA12 = USB D+
 4. Click on download and wait for it to complete and after completion click on disconnect in software and press RESET button of board.
 5. Firmware is flashed now!
    
-After flashing, blie light on board start blinking and the wheel should appear in Windows as:
+After flashing, blue light on board start blinking and the wheel should appear in Windows as:
 - A **USB Input Device** in Device Manager (HID)
 - A **COM port** in Device Manager (CDC)
 - A **STM32 Device** in Joy.cpl
