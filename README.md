@@ -56,7 +56,7 @@ PA12 = USB D+
 2. Open STM32CubeProgrammer software and select USB from dropdown menu and click refresh icon. USB1 should appear now.
 3. Now click on open file and select FFBWheel.elf file.
 4. Click on download and wait for it to complete and after completion click on disconnect in software and press RESET button of board.
-5. Firmware is flashed now!
+   **Firmware is flashed now!**
    
 After flashing, blue light on board start blinking and the wheel should appear in Windows as:
 - A **USB Input Device** in Device Manager (HID)
