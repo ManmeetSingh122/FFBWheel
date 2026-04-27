@@ -1,35 +1,6 @@
 # DIY FFB Racing Wheel — Firmware & Config App
-## STM32F401CCU6 + BTS7960 + B10K Pot
 
----
-
-## What's In This Folder
-
-```
-FFBWheel/
-├── Firmware/
-│   └── Core/
-│       ├── Inc/
-│       │   ├── ffb_wheel.h       ← Shared defines and config struct
-│       │   ├── motor.h           ← BTS7960 PWM driver header
-│       │   ├── adc_input.h       ← Potentiometer ADC header
-│       │   ├── ffb_engine.h      ← FFB effect engine header
-│       │   ├── config.h          ← Flash storage header
-│       │   ├── serial_cmd.h      ← Serial config protocol header
-│       │   └── usb_hid_desc.h    ← USB HID report types header
-│       └── Src/
-│           ├── main.c            ← Main application loop
-│           ├── motor.c           ← BTS7960 TIM1 PWM driver
-│           ├── adc_input.c       ← 6-channel ADC with DMA
-│           ├── ffb_engine.c      ← Spring, Damper, Friction, Constant Force
-│           ├── config.c          ← Save/load settings from internal flash
-│           ├── serial_cmd.c      ← JSON serial protocol for web app
-│           └── usb_hid_desc.c    ← Complete USB HID FFB descriptor bytes
-└── WebApp/
-    └── index.html                ← Open in Chrome to configure everything
-```
-
----
+## STM32F411 + BTS7960 + B10K Pot
 
 ## Hardware Connections
 
@@ -79,128 +50,24 @@ PA12 = USB D+
 
 ---
 
-## Step 1 — Create STM32CubeIDE Project
+## Flashing
 
-1. Open STM32CubeIDE
-2. File → New → STM32 Project
-3. In the board selector, type **STM32F401CCU6** → select it → Next
-4. Name the project **FFBWheel** → Finish
-
----
-
-## Step 2 — Configure the .ioc File
-
-In the .ioc (pinout) view, configure the following:
-
-### USB (most important)
-- Left panel → Connectivity → USB_OTG_FS
-- Mode: **Device Only**
-- Left panel → Middleware → USB_DEVICE
-- Class: **Human Interface Device Class (HID)**
-
-### Enable Virtual COM Port (for config app)
-- You need a **Composite HID + CDC** USB device
-- In USB_DEVICE, change class to **Custom HID** (we use our own descriptor)
-- Add CDC class separately — see note below*
-
-### ADC1
-- Enable ADC1
-- Enable channels: IN0, IN1, IN2, IN3, IN4, IN5
-- Mode: Independent mode, Continuous Conversion
-- Enable DMA: DMA2 Stream0, Circular mode
-
-### TIM1
-- Enable TIM1
-- Channel 1: **PWM Generation CH1** (PA8)
-- Channel 2: **PWM Generation CH2** (PA9)
-- Prescaler: 3
-- Counter Period (ARR): 999
-
-### Clock
-- Set HCLK to **84 MHz**
-- USB requires 48 MHz on PLL48CLK — CubeMX will configure this automatically
-
-### Generate Code
-- Project → Generate Code
-
----
-
-## Step 3 — Copy Source Files Into Project
-
-After CubeMX generates the project:
-
-1. Copy all files from `Firmware/Core/Inc/` into your project's `Core/Inc/` folder
-2. Copy all files from `Firmware/Core/Src/` into your project's `Core/Src/` folder
-3. In STM32CubeIDE, right-click Core/Inc → Refresh, and Core/Src → Refresh
-
----
-
-## Step 4 — Hook Into USB Callbacks
-
-Find these generated files and add the callback hookups:
-
-### In `USB_DEVICE/App/usbd_hid_if.c`:
-Find the `CUSTOM_HID_OutEvent_FS` function and add:
-```c
-extern void USBD_HID_OutCallback(uint8_t report_id, uint8_t *buf, uint16_t len);
-
-static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state)
-{
-    USBD_CUSTOM_HID_HandleTypeDef *hhid =
-        (USBD_CUSTOM_HID_HandleTypeDef*)hUsbDeviceFS.pClassData;
-
-    if (hhid != NULL)
-    {
-        uint8_t *buf = hhid->Report_buf;
-        uint8_t  report_id = buf[0];           // first byte = report ID
-        USBD_HID_OutCallback(report_id, buf, CUSTOM_HID_EPOUT_SIZE);
-    }
-
-    return USBD_OK;
-}
-```
-
-### In `USB_DEVICE/App/usbd_cdc_if.c`:
-Find the `CDC_Receive_FS` function and add:
-```c
-extern void CDC_ReceiveCallback(uint8_t *buf, uint32_t len);
-
-static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
-{
-    CDC_ReceiveCallback(Buf, *Len);
-    USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
-    USBD_CDC_ReceivePacket(&hUsbDeviceFS);
-    return USBD_OK;
-}
-```
-
-### In `USB_DEVICE/App/usbd_desc.c`:
-Replace the HID report descriptor with ours:
-```c
-#include "usb_hid_desc.h"
-// Change the descriptor reference to use HID_ReportDescriptor
-// and HID_ReportDescriptorSize from our usb_hid_desc.c
-```
-
----
-
-## Step 5 — Build and Flash
-
-1. Press the **Build** button (hammer icon) in STM32CubeIDE
-2. Make sure there are no errors (warnings are OK)
-3. To flash: hold BOOT0 button on Black Pill while plugging USB
-4. Run → Debug (or Run → Run) to flash via ST-Link
-   OR use STM32CubeProgrammer with DFU mode
-
-After flashing, the wheel should appear in Windows as:
-- A **Joystick / Gamepad** in Device Manager (HID)
+1. To flash: plug STM32 board to laptop/PC via USB cable the press and hold BOOT0 button and while holding press RESET button and release BOOT0 button.
+2. Open STM32CubeProgrammer software and select USB from dropdown menu and click refresh icon. USB1 should appear now.
+3. Now click on open file and select FFBWheel.elf file.
+4. Click on download and wait for it to complete and after completion click on disconnect in software and press RESET button of board.
+5. Firmware is flashed now!
+   
+After flashing, blie light on board start blinking and the wheel should appear in Windows as:
+- A **USB Input Device** in Device Manager (HID)
 - A **COM port** in Device Manager (CDC)
+- A **STM32 Device** in Joy.cpl
 
 ---
 
-## Step 6 — Use the Config App
+## Configuring — Use the Config App
 
-1. Open `WebApp/index.html` in **Google Chrome**
+1. Open `WebApp/webapp_fixed.html` in **Google Chrome**
 2. Click **Connect** button
 3. Select the COM port of your wheel
 4. Go through each tab to calibrate
@@ -263,11 +130,3 @@ After flashing, the wheel should appear in Windows as:
 - Add a physical E-STOP button between PSU PS_ON and GND
 - The 775 motor is powerful — always test with the wheel in hand at low strength first
 - Heatsink on BTS7960 if running sessions longer than 30 minutes
-
----
-
-*Note on Composite HID+CDC: If CubeMX doesn't support composite HID+CDC directly,
-search for "STM32 USB Composite HID CDC" on GitHub — there are several ready-made
-templates that work with STM32F401. The Middleware layer just needs both class
-handlers registered. This is the trickiest part of the setup — the Discord community
-at discord.gg/openffboard can help if you get stuck here.
