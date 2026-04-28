@@ -131,6 +131,7 @@ int main(void)
         /* HID report every 5ms */
         if ((uint32_t)(now - t_hid) >= 5) {
             t_hid = now;
+            ADC_Filter_Update();   /* update EMA filter before reading axes */
             send_hid_report();
         }
 

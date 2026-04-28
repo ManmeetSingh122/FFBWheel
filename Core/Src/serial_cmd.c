@@ -77,9 +77,12 @@ void Serial_SendLive(void)
         "\"shft_x\":%u,\"shft_y\":%u,"
         "\"gear\":%u,\"ffb_en\":%u}\n",
         (double)ADC_GetWheelAngle(),
-        g_adc[ADC_IDX_STEER],
-        g_adc[ADC_IDX_THR], g_adc[ADC_IDX_BRAKE], g_adc[ADC_IDX_CLUTCH],
-        g_adc[ADC_IDX_SHFT_X], g_adc[ADC_IDX_SHFT_Y],
+        ADC_GetRawFiltered(ADC_IDX_STEER),
+        ADC_GetRawFiltered(ADC_IDX_THR),
+        ADC_GetRawFiltered(ADC_IDX_BRAKE),
+        ADC_GetRawFiltered(ADC_IDX_CLUTCH),
+        ADC_GetRawFiltered(ADC_IDX_SHFT_X),
+        ADC_GetRawFiltered(ADC_IDX_SHFT_Y),
         (uint8_t)ADC_GetGear(), g_ffb_enabled);
     Serial_Send(buf);
 }

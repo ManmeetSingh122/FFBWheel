@@ -4,11 +4,62 @@
 #include "stm32f4xx_hal_adc.h"
 #include "stm32f4xx_hal_dma.h"
 
-/* ADC DMA result buffer (shared with main.c via extern in ffb_wheel.h) */
+/* ADC DMA result buffer — raw values written by DMA continuously */
 volatile uint16_t g_adc[ADC_CHANNELS];
 
-static ADC_HandleTypeDef hadc1;
+/* ── Filtered ADC values ─────────────────────────────────────────────────── */
+/* Two-stage noise rejection:
+   Stage 1 — Exponential moving average (EMA):
+     alpha = 1/32 (shift by 5). Smooths high-frequency noise.
+     Updated every 5ms from the main loop.
+   Stage 2 — Hysteresis (deadband):
+     Output only updates when the filtered value changes by more than
+     ADC_HYSTERESIS counts. Eliminates the last 1-3 count jitter that
+     EMA alone can't remove on a noisy DIY board.                           */
+#define EMA_SHIFT       5     /* alpha = 1/32                               */
+#define ADC_HYSTERESIS  3     /* counts — ignore changes smaller than this  */
 
+static uint32_t s_filtered[ADC_CHANNELS];   /* Q5 fixed-point (value * 32)  */
+static uint16_t s_output[ADC_CHANNELS];     /* hysteresis-gated output      */
+static uint8_t  s_filter_init = 0;
+
+void ADC_Filter_Update(void)
+{
+    if (!s_filter_init) {
+        for (uint8_t i = 0; i < ADC_CHANNELS; i++) {
+            s_filtered[i] = (uint32_t)g_adc[i] << EMA_SHIFT;
+            s_output[i]   = g_adc[i];
+        }
+        s_filter_init = 1;
+        return;
+    }
+    for (uint8_t i = 0; i < ADC_CHANNELS; i++) {
+        /* Stage 1: EMA */
+        s_filtered[i] = s_filtered[i]
+                        - (s_filtered[i] >> EMA_SHIFT)
+                        + (uint32_t)g_adc[i];
+
+        /* Stage 2: hysteresis — only update output if change > threshold  */
+        uint16_t ema_val = (uint16_t)(s_filtered[i] >> EMA_SHIFT);
+        int32_t  delta   = (int32_t)ema_val - (int32_t)s_output[i];
+        if (delta < 0) delta = -delta;
+        if (delta > ADC_HYSTERESIS)
+            s_output[i] = ema_val;
+    }
+}
+
+static inline uint16_t adc_filtered(uint8_t ch)
+{
+    return s_output[ch];
+}
+
+/* Public version — for Serial_SendLive to report filtered values           */
+uint16_t ADC_GetRawFiltered(uint8_t ch)
+{
+    return (ch < ADC_CHANNELS) ? adc_filtered(ch) : 0;
+}
+
+static ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
 /* ── Init ────────────────────────────────────────────────────────────────── */
@@ -68,7 +119,13 @@ void ADC_Input_Init(void)
 
     /* Configure 6 channels: PA0=CH0 .. PA5=CH5 */
     ADC_ChannelConfTypeDef ch = {0};
-    ch.SamplingTime = ADC_SAMPLETIME_84CYCLES;
+    /* 480 cycles sampling time — required for high-impedance pot sources
+       (10kΩ typical). At 84MHz/4 = 21MHz ADC clock, 480 cycles = ~23µs
+       per channel. This fully charges the internal S/H capacitor and
+       eliminates inter-channel crosstalk (bleed from adjacent channels).
+       84 cycles was too short for 10kΩ sources and caused the throttle
+       value to appear on unconnected brake/clutch pins.                    */
+    ch.SamplingTime = ADC_SAMPLETIME_480CYCLES;
     for (uint8_t i = 0; i < ADC_CHANNELS; i++) {
         ch.Channel = ADC_CHANNEL_0 + i;     /* ADC_CHANNEL_0 .. ADC_CHANNEL_5 = 0..5 */
         ch.Rank    = i + 1;
@@ -82,7 +139,7 @@ void ADC_Input_Init(void)
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)g_adc, ADC_CHANNELS);
 }
 
-/* ── Raw read ────────────────────────────────────────────────────────────── */
+/* ── Raw read (unfiltered — for diagnostics only) ───────────────────────── */
 uint16_t ADC_GetRaw(uint8_t ch)
 {
     return (ch < ADC_CHANNELS) ? g_adc[ch] : 0;
@@ -92,6 +149,9 @@ uint16_t ADC_GetRaw(uint8_t ch)
 static int16_t apply_curve(uint16_t raw, uint16_t cal_min, uint16_t cal_max,
                             uint8_t invert, uint8_t curve)
 {
+    /* Guard against uncalibrated / disconnected pedal */
+    if (cal_max <= cal_min) return 0;
+
     /* Clamp to calibration range */
     if (raw < cal_min) raw = cal_min;
     if (raw > cal_max) raw = cal_max;
@@ -114,7 +174,7 @@ static int16_t apply_curve(uint16_t raw, uint16_t cal_min, uint16_t cal_max,
 /* ── Axis read ───────────────────────────────────────────────────────────── */
 int16_t ADC_GetAxis(uint8_t axis)
 {
-    uint16_t raw = g_adc[axis];
+    uint16_t raw = adc_filtered(axis);   /* use filtered value */
     switch (axis) {
         case ADC_IDX_STEER:
             /* Steering is handled separately via ADC_GetWheelAngle */
@@ -136,7 +196,7 @@ int16_t ADC_GetAxis(uint8_t axis)
 /* ── Steering angle (degrees) ────────────────────────────────────────────── */
 float ADC_GetWheelAngle(void)
 {
-    uint16_t raw = g_adc[ADC_IDX_STEER];
+    uint16_t raw = adc_filtered(ADC_IDX_STEER);   /* use filtered value */
 
     /* Clamp to calibration range */
     uint16_t mn = g_cfg.steer_min;
@@ -148,13 +208,17 @@ float ADC_GetWheelAngle(void)
 
     float pot_angle;
 
+    /* Guard against bad calibration (uncalibrated or miscalibrated) */
+    uint16_t range_right = (mx > ct) ? (mx - ct) : 1;
+    uint16_t range_left  = (ct > mn) ? (ct - mn) : 1;
+
     if (raw >= ct) {
         /* Right of centre */
-        pot_angle = (float)(raw - ct) / (float)(mx - ct)
+        pot_angle = (float)(raw - ct) / (float)range_right
                     * (g_cfg.pot_degrees / 2.0f);
     } else {
         /* Left of centre */
-        pot_angle = -((float)(ct - raw) / (float)(ct - mn))
+        pot_angle = -((float)(ct - raw) / (float)range_left)
                     * (g_cfg.pot_degrees / 2.0f);
     }
 
@@ -195,8 +259,8 @@ float ADC_GetWheelVelocity(void)
 /* ── Gear detection ──────────────────────────────────────────────────────── */
 Gear_t ADC_GetGear(void)
 {
-    uint16_t x = g_adc[ADC_IDX_SHFT_X];
-    uint16_t y = g_adc[ADC_IDX_SHFT_Y];
+    uint16_t x = adc_filtered(ADC_IDX_SHFT_X);   /* use filtered values */
+    uint16_t y = adc_filtered(ADC_IDX_SHFT_Y);
 
     uint8_t left   = (x < g_cfg.shft_x_left);
     uint8_t right  = (x > g_cfg.shft_x_right);
