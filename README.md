@@ -93,7 +93,7 @@ Push knob down + move to 1st gear position = Reverse.
 1. Plug STM32 to PC via USB
 2. Hold **BOOT0**, press and release **RESET**, then release **BOOT0** — board enters DFU mode
 3. Open **STM32CubeProgrammer**, select **USB** from dropdown, click refresh — `USB1` appears
-4. Click **Open File** → select `FFBWheel.elf` (from [Releases](../../releases))
+4. Click **Open File** → select `FFBWheel.elf` (from [Releases](../../releases/latest))
 5. Click **Download**, wait for completion
 6. Click **Disconnect**, press **RESET**
 
@@ -106,7 +106,8 @@ After flashing the blue LED blinks and the device appears in Windows as:
 
 ## Configuration App
 
-Open `webapp.html` in **Google Chrome** (Firefox does not support Web Serial API).
+Open `webapp.html` in **Google Chrome** (Firefox does not support Web Serial API).  
+Download `webapp.html` from [Releases](../../releases/latest) — do not open directly from the source tree.
 
 ### First-Time Calibration Order
 
