@@ -11,6 +11,10 @@ DMA_HandleTypeDef* ADC_GetDMAHandle(void);
    Results are always fresh in g_adc[].                                       */
 void ADC_Input_Init(void);
 
+/* Update the EMA filter for all channels. Call every main loop iteration
+   (tied to the 5ms HID report tick for consistent timing).                  */
+void ADC_Filter_Update(void);
+
 /* Apply calibration and curve, return HID-range value (-32767 to +32767).
    axis: ADC_IDX_* constant                                                   */
 int16_t ADC_GetAxis(uint8_t axis);
@@ -21,7 +25,10 @@ float   ADC_GetWheelAngle(void);
 /* Detect current gear from shifter pots */
 Gear_t  ADC_GetGear(void);
 
-/* Read raw ADC value for a channel (0-4095) */
+/* Read raw ADC value for a channel (0-4095), unfiltered — diagnostics only */
 uint16_t ADC_GetRaw(uint8_t ch);
+
+/* Read filtered ADC value for a channel (0-4095) */
+uint16_t ADC_GetRawFiltered(uint8_t ch);
 
 #endif
