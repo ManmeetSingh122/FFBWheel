@@ -1,132 +1,267 @@
-# DIY FFB Racing Wheel — Firmware & Config App
+# FFBWheel — DIY Force Feedback Steering Wheel
 
-## STM32F411 + BTS7960 + B10K Pot
+Open-source firmware for a direct-drive style FFB steering wheel built on the **STM32F411 Black Pill**.  
+Appears in Windows as a **DirectInput FFB joystick** (HID) + **COM port** (CDC) for configuration.
 
-## Hardware Connections
+> **Status:** Working. Tested on STM32F411CEU6 (Black Pill) with BTS7960 motor driver and 775 DC motor.
 
-### BTS7960 Motor Driver
+---
+
+## Features
+
+- Full DirectInput PID force feedback (Spring, Damper, Friction, Inertia, Constant Force, Sine, Square, Triangle)
+- Up to 8 simultaneous FFB effects
+- Steering + Throttle + Brake + Clutch axes (12-bit ADC, EMA filtered + hysteresis)
+- H-pattern shifter (6 gears + Reverse via pushdown switch)
+- 8 digital buttons
+- Soft lock (configurable rotation range, 180°–1800°)
+- Three independent failsafes: IWDG watchdog, USB timeout, stuck motor detection
+- All settings saved to flash — survives power cycles
+- Web app config tool (Chrome only, Web Serial API)
+
+---
+
+## Hardware
+
+### What You Need
+
+| Part | Notes |
+|---|---|
+| STM32F411 Black Pill | WeAct or clone, 25 MHz HSE crystal required |
+| BTS7960 motor driver | 43A H-bridge module |
+| 775 DC motor | 12V, any RPM — geared down via belt/pulley |
+| B10K potentiometer | For steering (and pedals/shifter if used) |
+| 12V PSU | ATX PSU works well — use yellow (12V) and black (GND) |
+| USB cable | Data cable, not charge-only |
+
+### Pin Mapping
+
+| Pin | Function |
+|---|---|
+| PA0 | Steering pot (ADC) |
+| PA1 | Throttle pot (ADC) |
+| PA2 | Brake pot (ADC) |
+| PA3 | Clutch pot (ADC) |
+| PA4 | Shifter X pot (ADC) |
+| PA5 | Shifter Y pot (ADC) |
+| PA8 | BTS7960 RPWM (TIM1 CH1) |
+| PA9 | BTS7960 LPWM (TIM1 CH2) |
+| PA11 | USB D− *(reserved — do not use)* |
+| PA12 | USB D+ *(reserved — do not use)* |
+| PB0–PB7 | Buttons 1–8 (active LOW, internal pull-up) |
+| PB8 | Reverse gear switch (active LOW, internal pull-up) |
+| PC13 | Onboard LED (heartbeat blink = firmware running) |
+
+### BTS7960 Wiring
+
+| BTS7960 Pin | Connect To |
+|---|---|
+| M+ | Motor terminal 1 |
+| M− | Motor terminal 2 |
+| B+ | 12V (PSU yellow, 15A fuse recommended) |
+| B− | GND (common) |
+| RPWM | PA8 (STM32) |
+| LPWM | PA9 (STM32) |
+| R_EN | 3.3V (tie HIGH permanently) |
+| L_EN | 3.3V (tie HIGH permanently) |
+| VCC | 5V (PSU red) |
+| GND | GND (common) |
+
+### Potentiometer Wiring (all pots same)
+
 ```
-BTS7960 Pin    →    Connect To
-M+             →    775 Motor terminal 1
-M-             →    775 Motor terminal 2
-B+             →    12V (from PSU yellow wire, 15A fuse)
-B-             →    GND (common)
-RPWM           →    PA8  (STM32)
-LPWM           →    PA9  (STM32)
-R_EN           →    3.3V (tie HIGH permanently)
-L_EN           →    3.3V (tie HIGH permanently)
-VCC            →    5V   (from PSU red wire)
-GND            →    GND  (common)
+Left pin  → 3.3V
+Middle pin → ADC pin (PA0–PA5)
+Right pin  → GND
 ```
 
-### Potentiometers (all the same wiring)
-```
-Left pin   →    3.3V
-Middle pin →    ADC pin (see table below)
-Right pin  →    GND
+> **Tip:** Add a 100nF ceramic capacitor from each pot wiper pin to GND, as close to the STM32 as possible. This significantly reduces ADC noise.
 
-PA0  =  Steering pot
-PA1  =  Throttle pot
-PA2  =  Brake pot
-PA3  =  Clutch pot
-PA4  =  Shifter X pot
-PA5  =  Shifter Y pot
-```
+### Buttons
 
-### Buttons (optional, 8 buttons)
-```
-PB0–PB7  =  Buttons 1–8
-Each button: one pin to PBx, other pin to GND
-(firmware uses internal pull-up, no resistors needed)
-```
+Connect one side of each button to PBx, other side to GND. No resistors needed — firmware uses internal pull-up.
 
-### USB
-```
-PA11 = USB D-  (built-in, just use the USB port on Black Pill)
-PA12 = USB D+
-```
+### Reverse Gear Switch
 
-### IMPORTANT: PA11 and PA12 are USB — do NOT use them for anything else!
+Connect a momentary pushbutton (or microswitch under shifter knob) between PB8 and GND.  
+Push knob down + move to 1st gear position = Reverse.
 
 ---
 
 ## Flashing
 
-1. To flash: plug STM32 board to laptop/PC via USB cable the press and hold BOOT0 button and while holding press RESET button and release BOOT0 button.
-2. Open STM32CubeProgrammer software and select USB from dropdown menu and click refresh icon. USB1 should appear now.
-3. Now click on open file and select FFBWheel.elf file (`Download it from Releases`.)
-4. Click on download and wait for it to complete and after completion click on disconnect in software and press RESET button of board.
-   **Firmware is flashed now!**
-   
-After flashing, blue light on board start blinking and the wheel should appear in Windows as:
-- A **USB Input Device** in Device Manager (HID)
-- A **COM port** in Device Manager (CDC)
-- A **STM32 Device** in Joy.cpl
+1. Plug STM32 to PC via USB
+2. Hold **BOOT0**, press and release **RESET**, then release **BOOT0** — board enters DFU mode
+3. Open **STM32CubeProgrammer**, select **USB** from dropdown, click refresh — `USB1` appears
+4. Click **Open File** → select `FFBWheel.elf` (from [Releases](../../releases))
+5. Click **Download**, wait for completion
+6. Click **Disconnect**, press **RESET**
+
+After flashing the blue LED blinks and the device appears in Windows as:
+- `STM32 Custom Human interface` in joy.cpl
+- A HID device in Device Manager
+- A COM port (COMx) in Device Manager
 
 ---
 
-## Configuring — Use the Config App
+## Configuration App
 
-1. Open `webapp.html` in **Google Chrome** (`Download it from Releases`)
-2. Click **Connect** button
-3. Select the COM port of your wheel
-4. Go through each tab to calibrate
+Open `webapp.html` in **Google Chrome** (Firefox does not support Web Serial API).
 
-### First-time calibration order:
-1. **Wheel Setup tab** → Set Rotation Range (900), Pulley Ratio (4.5), Pot Sweep (200)
-2. **Wheel Setup tab** → Turn wheel full left → "Set Left Lock", center → "Set Center", full right → "Set Right Lock"
-3. **Pedals tab** → For each pedal: release it → "Set Released", press fully → "Set Full Press"
-4. **Shifter tab** → Move to each gear position → click matching button
-5. **FFB Tuning tab** → Start with Spring 65%, Strength 80%, try in game
-6. Click **Save to Flash** — done forever
+### First-Time Calibration Order
+
+1. **Wheel Setup tab** — set Rotation Range (e.g. 900°), Pulley Ratio, Pot Sweep
+2. **Wheel Setup tab** — turn wheel full left → *Set Left Lock*, center → *Set Center*, full right → *Set Right Lock*
+3. **Pedals tab** — for each pedal: fully release → *Set Released*, fully press → *Set Full Press*
+4. **Shifter tab** — move to each gear position → click matching button
+5. **FFB Tuning tab** — start with Spring 65%, Strength 80%, test in game
+6. Click **Save to Flash** — settings survive power cycles
 
 ---
 
-## Default Pin Summary
+## Serial Commands (Advanced)
 
-| Pin  | Function            |
-|------|---------------------|
-| PA0  | Steering pot ADC    |
-| PA1  | Throttle ADC        |
-| PA2  | Brake ADC           |
-| PA3  | Clutch ADC          |
-| PA4  | Shifter X ADC       |
-| PA5  | Shifter Y ADC       |
-| PA8  | BTS7960 RPWM        |
-| PA9  | BTS7960 LPWM        |
-| PA11 | USB D- (reserved)   |
-| PA12 | USB D+ (reserved)   |
-| PB0–PB7 | Buttons 1–8    |
+The firmware exposes a JSON protocol over the CDC COM port (115200 baud, any terminal or the web app).
+
+### Read Commands
+
+| Command | Response |
+|---|---|
+| `GET_CONFIG` | Full config JSON with all current settings |
+| `GET_LIVE` | Live ADC values, wheel angle, gear, FFB state |
+| `GET_STATUS` | Failsafe state, reason, FFB enabled, uptime (ms) |
+
+### Calibration Commands
+
+| Command | Action |
+|---|---|
+| `CALIBRATE_CENTER` | Save current steering ADC as center |
+| `CALIBRATE_MIN` | Save current steering ADC as left lock |
+| `CALIBRATE_MAX` | Save current steering ADC as right lock |
+| `CAL_THR_MIN` | Save current throttle ADC as released |
+| `CAL_THR_MAX` | Save current throttle ADC as full press |
+| `CAL_BRAKE_MIN` | Save current brake ADC as released |
+| `CAL_BRAKE_MAX` | Save current brake ADC as full press |
+| `CAL_CLUTCH_MIN` | Save current clutch ADC as released |
+| `CAL_CLUTCH_MAX` | Save current clutch ADC as full press |
+| `CAL_SHFT_LEFT` | Save current shifter X as left gate |
+| `CAL_SHFT_RIGHT` | Save current shifter X as right gate |
+| `CAL_SHFT_FWD` | Save current shifter Y as forward gate |
+| `CAL_SHFT_REV` | Save current shifter Y as reverse gate |
+
+### Set Commands
+
+Format: `SET <key> <value>`
+
+| Key | Type | Description |
+|---|---|---|
+| `range` | int | Wheel rotation range in degrees (180–1800) |
+| `ratio` | float | Pulley ratio (wheel degrees / pot degrees) |
+| `pot_deg` | float | Physical pot sweep in degrees |
+| `invert` | 0/1 | Invert steering direction |
+| `strength` | 0–100 | Global FFB strength % |
+| `spring` | 0–100 | Spring effect gain % |
+| `damper` | 0–100 | Damper effect gain % |
+| `friction` | 0–100 | Friction effect gain % |
+| `inertia` | 0–100 | Inertia effect gain % |
+| `max_torque` | 0–100 | Motor torque ceiling % (safety limit) |
+| `deadzone` | int | Center deadzone in degrees |
+| `thr_curve` | 0–2 | Throttle curve: 0=linear, 1=square, 2=cubic |
+| `brake_curve` | 0–2 | Brake curve |
+| `clutch_curve` | 0–2 | Clutch curve |
+
+### Other Commands
+
+| Command | Action |
+|---|---|
+| `SAVE` | Write current config to flash |
+| `RESET` | Load factory defaults (does not save automatically) |
+| `CLEAR_FAILSAFE` | Clear a triggered failsafe without hardware reset |
+
+### Example Session
+
+```
+→ GET_CONFIG
+← {"type":"config","range":900,"ratio":4.50,...}
+
+→ SET strength 75
+← {"type":"ok"}
+
+→ SAVE
+← {"type":"ok","msg":"Saved"}
+
+→ GET_STATUS
+← {"type":"status","failsafe":0,"reason":"none","ffb_en":1,"uptime":12453}
+```
+
+---
+
+## Failsafe System
+
+Three independent safety mechanisms protect against motor runaway:
+
+| Failsafe | Trigger | Action |
+|---|---|---|
+| **IWDG Watchdog** | Firmware freeze for >4 seconds | MCU reset, motor stops |
+| **USB Timeout** | No FFB data from game for >200ms | Motor stops |
+| **Stuck Motor** | >80% torque for >2s with <2° movement | Motor stops |
+
+After a failsafe triggers, send `CLEAR_FAILSAFE` via serial or press the board's RESET button.
 
 ---
 
 ## Troubleshooting
 
-**Wheel not appearing in Windows:**
-- Check USB cable is data cable (not charge-only)
-- Make sure Black Pill is not still in DFU mode after flashing
+**Wheel not appearing in Windows**
+- Use a data USB cable (charge-only cables have no data lines)
+- Make sure the board is not still in DFU mode — press RESET after flashing
 
-**FFB not working in game:**
-- Open Windows Game Controllers (joy.cpl) — test axes first
-- Enable FFB in game settings (usually under "steering wheel" device settings)
-- Try DirectX Diagnostic Tool (dxdiag) to verify FFB device is listed
+**FFB not working in game**
+- Verify axes move in joy.cpl first
+- Enable FFB in game settings under the steering wheel device
+- Some games need the wheel set as "primary controller"
 
-**Steering direction inverted:**
-- Use Invert toggle in Wheel Setup tab
-- OR swap the two motor wires on BTS7960 M+/M-
+**Steering direction inverted**
+- Use the Invert toggle in the config app, or swap M+/M− on the BTS7960
 
-**Motor runs at power-on (without touching wheel):**
-- Re-do center calibration — pot center ADC value is off
+**Motor runs at power-on without input**
+- Re-do center calibration — the pot center ADC value is off
 
-**Web app won't connect:**
-- Must use Google Chrome (Firefox does not support Web Serial API)
-- Allow serial port permission when Chrome asks
+**Values fluctuating in live data**
+- Normal for unconnected (floating) ADC pins — connect pots or ignore
+- Add 100nF caps from each pot wiper to GND to reduce noise
+
+**Web app won't connect**
+- Must use Google Chrome — Firefox does not support Web Serial API
+- Click Allow when Chrome asks for serial port permission
 
 ---
 
-## Safety Reminders
+## Safety
 
-- Always start with Max Torque Limit at 50% until you verify everything works
-- Add a physical E-STOP button between PSU PS_ON and GND
-- The 775 motor is powerful — always test with the wheel in hand at low strength first
-- Heatsink on BTS7960 if running sessions longer than 30 minutes
+- **Start with Max Torque at 50%** until you verify everything works correctly
+- **Add a physical E-STOP** — wire a normally-closed button between PSU PS_ON and GND
+- **The 775 motor is powerful** — always test at low strength with the wheel in hand first
+- **Heatsink the BTS7960** if running sessions longer than 30 minutes
+- **15A fuse** on the 12V motor supply line
+
+---
+
+## Building from Source
+
+Open in **STM32CubeIDE**. The project is pre-configured for STM32F411CEU6.
+
+Build: `Project → Build All` (or Ctrl+B)  
+Flash: Use the `.elf` from `Debug/` folder with STM32CubeProgrammer as described above.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE)
+
+---
+
+## Contributing
+
+Issues and PRs welcome. If you build one, share a photo!
