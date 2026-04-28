@@ -54,7 +54,7 @@ PA12 = USB D+
 
 1. To flash: plug STM32 board to laptop/PC via USB cable the press and hold BOOT0 button and while holding press RESET button and release BOOT0 button.
 2. Open STM32CubeProgrammer software and select USB from dropdown menu and click refresh icon. USB1 should appear now.
-3. Now click on open file and select FFBWheel.elf file (`Download it from **Releases**`.)
+3. Now click on open file and select FFBWheel.elf file (`Download it from Releases`.)
 4. Click on download and wait for it to complete and after completion click on disconnect in software and press RESET button of board.
    **Firmware is flashed now!**
    
@@ -67,7 +67,7 @@ After flashing, blue light on board start blinking and the wheel should appear i
 
 ## Configuring — Use the Config App
 
-1. Open `webapp.html` in **Google Chrome** (`Download it from **Releases**`)
+1. Open `webapp.html` in **Google Chrome** (`Download it from Releases`)
 2. Click **Connect** button
 3. Select the COM port of your wheel
 4. Go through each tab to calibrate
