@@ -1,0 +1,11 @@
+../USB_DEVICE/App/usbd_composite.c:80:16:USBD_COMPOSITE_Init	16	static
+../USB_DEVICE/App/usbd_composite.c:104:16:USBD_COMPOSITE_DeInit	16	static
+../USB_DEVICE/App/usbd_composite.c:116:16:USBD_COMPOSITE_Setup	24	static
+../USB_DEVICE/App/usbd_composite.c:191:16:USBD_COMPOSITE_EP0_RxReady	16	static
+../USB_DEVICE/App/usbd_composite.c:201:16:USBD_COMPOSITE_DataIn	16	static
+../USB_DEVICE/App/usbd_composite.c:212:16:USBD_COMPOSITE_DataOut	24	static
+../USB_DEVICE/App/usbd_composite.c:233:17:USBD_COMPOSITE_GetFSCfgDesc	16	static
+../USB_DEVICE/App/usbd_composite.c:236:17:USBD_COMPOSITE_GetDeviceQualifierDesc	16	static
+../USB_DEVICE/App/usbd_composite.c:245:9:CDC_IsConnected	8	static
+../USB_DEVICE/App/usbd_composite.c:256:9:CDC_Transmit_FS	16	static
+../USB_DEVICE/App/usbd_composite.c:270:9:HID_SendReport_FS	16	static
