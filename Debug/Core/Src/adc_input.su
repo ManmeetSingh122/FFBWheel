@@ -1,8 +1,0 @@
-../Core/Src/adc_input.c:20:6:ADC_Input_Init	88	static
-../Core/Src/adc_input.c:91:10:ADC_GetRaw	16	static
-../Core/Src/adc_input.c:97:16:apply_curve	24	static
-../Core/Src/adc_input.c:120:9:ADC_GetAxis	32	static
-../Core/Src/adc_input.c:142:7:ADC_GetWheelAngle	32	static
-../Core/Src/adc_input.c:180:7:ADC_GetWheelVelocity	24	static
-../Core/Src/adc_input.c:198:8:ADC_GetGear	24	static
-../Core/Src/adc_input.c:228:20:ADC_GetDMAHandle	4	static

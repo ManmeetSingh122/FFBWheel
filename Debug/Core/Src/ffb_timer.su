@@ -1,3 +1,0 @@
-../Core/Src/ffb_timer.c:17:16:apply_soft_lock	40	static
-../Core/Src/ffb_timer.c:44:6:FFB_Timer_Init	16	static
-../Core/Src/ffb_timer.c:66:6:FFB_Timer_Tick	16	static

@@ -1,8 +1,0 @@
-../Core/Src/main.c:19:13:send_hid_report	6
-../Core/Src/main.c:47:13:SystemClock_Config	1
-../Core/Src/main.c:71:13:Buttons_Init	1
-../Core/Src/main.c:81:13:LED_Init	1
-../Core/Src/main.c:93:5:main	6
-../Core/Src/main.c:156:6:USBD_HID_OutCallback	1
-../Core/Src/main.c:162:6:CDC_ReceiveCallback	2
-../Core/Src/main.c:168:6:Error_Handler	1

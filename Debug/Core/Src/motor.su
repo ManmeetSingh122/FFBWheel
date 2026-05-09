@@ -1,3 +1,0 @@
-../Core/Src/motor.c:9:6:Motor_Init	64	static
-../Core/Src/motor.c:57:6:Motor_Set	24	static
-../Core/Src/motor.c:79:6:Motor_Stop	4	static

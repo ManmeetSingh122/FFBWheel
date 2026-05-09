@@ -1,9 +1,0 @@
-../Core/Src/ffb_engine.c:22:6:FFB_Init	8	static
-../Core/Src/ffb_engine.c:28:8:FFB_AllocEffect	16	static
-../Core/Src/ffb_engine.c:40:6:FFB_FreeEffect	16	static
-../Core/Src/ffb_engine.c:46:16:map_et	16	static
-../Core/Src/ffb_engine.c:62:6:FFB_ProcessReport	88	static
-../Core/Src/ffb_engine.c:185:23:clamp	24	static
-../Core/Src/ffb_engine.c:194:16:apply_envelope	56	static
-../Core/Src/ffb_engine.c:223:16:calc_effect	96	static
-../Core/Src/ffb_engine.c:322:9:FFB_Calculate	56	static

@@ -1,9 +1,0 @@
-../Core/Src/failsafe.c:27:13:init_watchdog	1
-../Core/Src/failsafe.c:39:6:Failsafe_Init	1
-../Core/Src/failsafe.c:50:6:Failsafe_KickUSB	3
-../Core/Src/failsafe.c:61:6:Failsafe_KickHID	1
-../Core/Src/failsafe.c:66:6:Failsafe_KickWDT	1
-../Core/Src/failsafe.c:71:6:Failsafe_Update	11
-../Core/Src/failsafe.c:135:9:Failsafe_IsTriggered	1
-../Core/Src/failsafe.c:140:6:Failsafe_Clear	1
-../Core/Src/failsafe.c:149:13:Failsafe_Reason	1

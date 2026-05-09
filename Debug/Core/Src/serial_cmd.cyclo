@@ -1,6 +1,0 @@
-../Core/Src/serial_cmd.c:24:6:Serial_Send	2
-../Core/Src/serial_cmd.c:34:13:send_config	1
-../Core/Src/serial_cmd.c:69:6:Serial_SendLive	1
-../Core/Src/serial_cmd.c:87:13:process_line	39
-../Core/Src/serial_cmd.c:143:6:Serial_ProcessByte	5
-../Core/Src/serial_cmd.c:157:6:Serial_Task	8
