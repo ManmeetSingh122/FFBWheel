@@ -17,7 +17,7 @@ Appears in Windows as **FFB Steering Wheel** (DirectInput HID + CDC COM port for
 - **5-point custom pedal curves** — interactive curve editor with presets
 - **Configurable ADC filter** — 4 levels (off/light/medium/heavy)
 - **FFB profiles** — save, load, export, import named profiles
-- **Firmware v2.5** with config struct v2.5
+- **Firmware v3.0** with config struct v3.0
 
 ---
 

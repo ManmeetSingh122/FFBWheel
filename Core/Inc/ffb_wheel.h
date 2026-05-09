@@ -14,8 +14,8 @@
 /* Reverse sw   : PB8      (INPUT_PULLUP)                                    */
 
 /* ── Firmware version ────────────────────────────────────────────────────── */
-#define FW_VERSION_MAJOR  2
-#define FW_VERSION_MINOR  5
+#define FW_VERSION_MAJOR  3
+#define FW_VERSION_MINOR  0
 
 /* ── Input mode ──────────────────────────────────────────────────────────── */
 #define INPUT_MODE_POT      0
@@ -54,7 +54,7 @@
 
 /* ── Flash ───────────────────────────────────────────────────────────────── */
 #define CONFIG_FLASH_ADDR  0x08060000UL
-#define CONFIG_MAGIC       0xFFBB0250UL   /* V2.5 — changes with struct layout */
+#define CONFIG_MAGIC       0xFFBB0300UL   /* V3.0 — changes with struct layout */
 
 /* ── HID axis range ──────────────────────────────────────────────────────── */
 #define HID_AXIS_MIN  -32767
