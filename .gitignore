@@ -1,0 +1,12 @@
+# ── App source — closed source, not published ────────────────────────────
+stm-ffb-utility/
+
+# ── STM32CubeIDE build output ─────────────────────────────────────────────
+Debug/
+Release/
+
+# ── OS / editor ───────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/settings.json
